@@ -8,17 +8,20 @@ from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
+from gensim.models import KeyedVectors
+from gensim.test.utils import datapath
 
 class movie_recommendation:
     def __init__(self, **kargs):
         self.topn = kargs.get('topn', 10)
         self.vote_thres = kargs.get('vote_thres', 100)
-        self.df = kargs.get('data', pd.read_pickle('./dataset/movies04293.pickle'))
+        self.df = kargs.get('data', pd.read_pickle('./dataset/naver_movie_220222.pickle'))
         self.a, self.b, self.c = kargs.get('a',0.8), kargs.get('b',0.1), kargs.get('c',0.1)
         self.verbose = kargs.get('verbose', 1)
         
         self.cvec = CountVectorizer(min_df=0, ngram_range=(1,2))
-        self.model = Word2Vec.load('./model/w2v_movie_plot.model')
+        #self.model = KeyedVectors.load_word2vec_format('./model/movie_word2vec.model')
+        self.model = Word2Vec.load('./model/word2vec.model')
         self.scaler = MinMaxScaler()
         
         if self.verbose == 1:
@@ -46,14 +49,18 @@ class movie_recommendation:
     def cos_sim(self, corp1, corp2):
         vec1, vec2 = [], []
         for word1, word2 in zip(corp1,corp2):
-            vec1.append(self.model.wv[word1])
-            vec2.append(self.model.wv[word2])
+            if word1 in self.model.wv:
+                vec1.append(self.model.wv[word1])
+            if word2 in self.model.wv:                
+                vec2.append(self.model.wv[word2])
 
         vec1, vec2 = np.array(vec1).mean(axis=0), np.array(vec2).mean(axis=0)
         return np.inner(vec1,vec2) / (np.linalg.norm(vec1)*np.linalg.norm(vec2))
 
     def similar_keywords_movies(self, title_idx):
         keywords_src = self.df.loc[title_idx,'keywords']
+        print(keywords_src)
+        
         keywords_sims = []
 
         for row in self.df.itertuples():
@@ -106,5 +113,10 @@ class movie_recommendation:
     
     
 recom = movie_recommendation()
-result = recom.getMovies(title='아이언맨 2')
+#result = recom.getMovies(title='캡틴 아메리카: 시빌 워')
+#result = recom.getMovies(title='이터널스')
+#result = recom.getMovies(title='백두산')
+#result = recom.getMovies(title='블랙 호크 다운')
+#result = recom.getMovies(title='극장판 바이올렛 에버가든')
+result = recom.getMovies(title='알리타: 배틀 엔젤')
 print(result[['weighted_sum','title', 'keywords_sim_scaled', 'genre_scaled', 'wvote_scaled']])
